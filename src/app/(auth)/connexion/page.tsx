@@ -23,7 +23,14 @@ export default function ConnexionPage() {
     })
 
     if (signInError) {
-      setError('Email ou mot de passe incorrect')
+      // Gestion précise des cas d'erreur
+      if (signInError.message.includes('Email not confirmed')) {
+        setError('Confirmez votre email avant de vous connecter. Vérifiez votre boîte mail.')
+      } else if (signInError.message.includes('Invalid login credentials')) {
+        setError('Email ou mot de passe incorrect.')
+      } else {
+        setError('Une erreur est survenue. Veuillez réessayer.')
+      }
       setLoading(false)
       return
     }
@@ -52,7 +59,7 @@ export default function ConnexionPage() {
               type="email"
               required
               value={form.email}
-              onChange={e => setForm({...form, email: e.target.value})}
+              onChange={e => setForm({ ...form, email: e.target.value })}
               className="mt-1 w-full border border-[#E5E7EB] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF6B35]"
               placeholder="vous@exemple.com"
             />
@@ -64,7 +71,7 @@ export default function ConnexionPage() {
               type="password"
               required
               value={form.password}
-              onChange={e => setForm({...form, password: e.target.value})}
+              onChange={e => setForm({ ...form, password: e.target.value })}
               className="mt-1 w-full border border-[#E5E7EB] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF6B35]"
               placeholder="Votre mot de passe"
             />
