@@ -19,12 +19,14 @@ export default function DashboardLayout({
   const router = useRouter()
   const supabase = createClient()
 
+  // ✅ NOUVEAU : cacher bouton flottant sur page création livraison
+  const cacherBoutonFlottant = pathname.includes('/nouvelle-livraison')
+
   const navItems = [
     { name: "Accueil", href: "/dashboard", icon: LayoutDashboard },
     { name: "Livraisons", href: "/mes-livraisons", icon: Package },
   ]
 
-  // ✅ CORRIGÉ : Vrai logout Supabase
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/connexion')
@@ -32,6 +34,7 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-[#F9FAFB]">
+
       {/* ================= DESKTOP SIDEBAR ================= */}
       <aside className="hidden md:flex w-64 bg-[#0A0A0A] text-white flex-col">
         <Link href="/dashboard" className="p-6 block">
@@ -83,15 +86,17 @@ export default function DashboardLayout({
       </main>
 
       {/* ================= FLOATING ACTION BUTTON (MOBILE) ================= */}
-      {/* ✅ CORRIGÉ : Route alignée avec dashboard/page.tsx */}
-      <Link
-        href="/dashboard/nouvelle-livraison"
-        className="md:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50"
-      >
-        <div className="w-16 h-16 bg-[#FF6B35] rounded-full flex items-center justify-center shadow-2xl hover:scale-105 transition">
-          <Plus size={28} color="white" />
-        </div>
-      </Link>
+      {/* ✅ MODIFIÉ : caché sur /dashboard/nouvelle-livraison */}
+      {!cacherBoutonFlottant && (
+        <Link
+          href="/dashboard/nouvelle-livraison"
+          className="md:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50"
+        >
+          <div className="w-16 h-16 bg-[#FF6B35] rounded-full flex items-center justify-center shadow-2xl hover:scale-105 transition">
+            <Plus size={28} color="white" />
+          </div>
+        </Link>
+      )}
 
       {/* ================= BOTTOM NAVIGATION (MOBILE) ================= */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-40">
@@ -126,6 +131,7 @@ export default function DashboardLayout({
           })}
         </div>
       </div>
+
     </div>
   )
 }
