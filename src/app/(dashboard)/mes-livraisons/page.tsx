@@ -1,167 +1,279 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent } from "@/components/ui/card"
-import { Package, MapPin, Phone, User, Clock, ShieldCheck, FileText } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Loader2,
+  Smartphone,
+  CheckCircle2,
+  MessageCircle,
+  Phone,
+  ArrowLeft
+} from "lucide-react"
+import { QUARTIERS_OUAGA, calculerPrixSimulation } from "@/lib/simulation-maps"
 
-type Commande = {
-  id: string
-  nom_client: string
-  telephone_client: string
-  quartier: string
-  prix: number
-  statut: string
-  created_at: string
-  description_colis: string
-  code_depart?: string
-  code_livraison?: string
-}
+type Etape = 'choix_methode' | 'formulaire' | 'paiement' | 'confirmation'
 
-const STATUT_STYLES: Record<string, { label: string; color: string }> = {
-  en_attente: { label: 'En attente', color: 'bg-yellow-100 text-yellow-700' },
-  en_cours: { label: 'En cours', color: 'bg-blue-100 text-blue-700' },
-  livre: { label: 'Livré', color: 'bg-green-100 text-green-700' },
-  annule: { label: 'Annulé', color: 'bg-red-100 text-red-700' },
-}
+const OPERATEURS = [
+  { value: 'orange', label: '🟠 Orange Money' },
+  { value: 'moov', label: '🔵 Moov Money' },
+]
 
-export default function MesLivraisons() {
+export default function NouvelleLivraison() {
+  const router = useRouter()
   const supabase = createClient()
-  const [commandes, setCommandes] = useState<Commande[]>([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchCommandes = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+  const [etape, setEtape] = useState<Etape>('choix_methode')
+  const [loading, setLoading] = useState(false)
+  const [form, setForm] = useState({ nom: '', tel: '', quartier: '', description: '' })
 
-      const { data, error } = await supabase
-        .from('commandes')
-        .select('*')
-        .eq('commercant_id', user.id)
-        .order('created_at', { ascending: false })
+  // ✅ paiement avec +226 imposé
+  const [paiement, setPaiement] = useState({ operateur: '', telephone: '+226 ' })
 
-      if (!error && data) setCommandes(data)
+  const [prix, setPrix] = useState(0)
+  const [codes, setCodes] = useState({ depart: '', livraison: '' })
+
+  const formValide =
+    form.nom.trim() !== '' &&
+    form.tel.length === 8 &&
+    form.quartier.trim() !== ''
+
+  const lienWhatsApp = "https://wa.me/message/TIFE3SLLZICKK1"
+  const numeroAppel = "+22653008298"
+
+  const handleQuartierChange = (valeur: string) => {
+    const quartierData = QUARTIERS_OUAGA.find(q => q.nom === valeur)
+    if (quartierData) {
+      setForm({ ...form, quartier: valeur })
+      setPrix(calculerPrixSimulation(quartierData.distanceKm))
+    }
+  }
+
+  const ouvrirWhatsApp = () => window.open(lienWhatsApp, '_blank')
+  const appeler = () => window.location.href = `tel:${numeroAppel}`
+
+  const handleSoumettreFormulaire = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formValide) return
+    setEtape('paiement')
+  }
+
+  const handleConfirmerPaiement = async () => {
+    if (!paiement.operateur) return alert("Choisissez un opérateur")
+    if (!paiement.telephone || paiement.telephone.length < 12) return alert("Entrez un numéro valide")
+
+    setLoading(true)
+    await new Promise(res => setTimeout(res, 2000))
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
       setLoading(false)
+      router.push('/connexion')
+      return
     }
 
-    fetchCommandes()
-  }, [])
+    const codeDepart = Math.floor(1000 + Math.random() * 9000).toString()
+    const codeLivraison = Math.floor(1000 + Math.random() * 9000).toString()
 
-  if (loading) {
+    const { error } = await supabase.from('commandes').insert({
+      nom_client: form.nom,
+      telephone_client: `+226${form.tel}`,
+      quartier: form.quartier,
+      description_colis: form.description,
+      prix,
+      commercant_id: user.id,
+      statut: 'en_attente',
+      operateur: paiement.operateur,
+      telephone_paiement: paiement.telephone,
+      paiement_statut: 'paye',
+      code_depart: codeDepart,
+      code_livraison: codeLivraison
+    })
+
+    setLoading(false)
+
+    if (error) {
+      alert(error.message)
+      setEtape('formulaire')
+    } else {
+      setCodes({ depart: codeDepart, livraison: codeLivraison })
+      setEtape('confirmation')
+    }
+  }
+
+  if (etape === 'choix_methode') {
     return (
-      <div className="flex justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF6B35]" />
+      <div className="min-h-screen bg-[#F9FAFB] flex flex-col items-center justify-center p-6">
+        <h1 className="text-2xl font-bold text-[#0A0A0A]">KODIA EXPRESS</h1>
+        <p className="text-[#6B7280] mt-1">Comment souhaitez-vous commander ?</p>
+
+        <div className="grid grid-cols-3 gap-3 w-full max-w-sm mt-6">
+          <button onClick={() => setEtape('formulaire')} className="flex flex-col items-center gap-2 bg-[#FF6B35] text-white rounded-2xl p-4">
+            <Smartphone size={28} />
+            <span className="text-xs font-semibold text-center">Commande automatique</span>
+          </button>
+
+          <button onClick={ouvrirWhatsApp} className="flex flex-col items-center gap-2 bg-green-500 text-white rounded-2xl p-4">
+            <MessageCircle size={28} />
+            <span className="text-xs font-semibold text-center">Commander par message</span>
+          </button>
+
+          <button onClick={appeler} className="flex flex-col items-center gap-2 bg-blue-500 text-white rounded-2xl p-4">
+            <Phone size={28} />
+            <span className="text-xs font-semibold text-center">Commander par appel</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (etape === 'confirmation') {
+    return (
+      <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-md p-6 w-full max-w-sm text-center space-y-6">
+          <CheckCircle2 className="text-green-500 mx-auto" size={56} />
+
+          <h2 className="text-xl font-bold">Livraison confirmée !</h2>
+          <p>{prix.toLocaleString()} FCFA payé</p>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-[#FFF4EF] rounded-2xl p-4">
+              <p className="text-xs">Code départ</p>
+              <p className="text-3xl font-bold text-[#FF6B35]">{codes.depart}</p>
+            </div>
+            <div className="bg-[#F0FDF4] rounded-2xl p-4">
+              <p className="text-xs">Code livraison</p>
+              <p className="text-3xl font-bold text-green-600">{codes.livraison}</p>
+            </div>
+          </div>
+
+          <Button onClick={()=>setEtape('choix_methode')} className="w-full bg-[#FF6B35] text-white">
+            Nouvelle livraison
+          </Button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="px-4 md:px-8 py-6 space-y-6">
-
-      {/* HEADER */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#0A0A0A]">
-            Livraisons
-          </h1>
-          <p className="text-sm text-gray-500">
-            Suivi de vos commandes
-          </p>
-        </div>
-
-        <div className="bg-[#FF6B35]/10 text-[#FF6B35] px-4 py-2 rounded-xl text-sm font-semibold">
-          {commandes.length} total
-        </div>
+    <div className="min-h-screen bg-[#F9FAFB] px-4 py-6">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-lg font-bold">Nouvelle livraison</h1>
+        <Button variant="outline" onClick={() => setEtape('choix_methode')}>
+          <ArrowLeft size={16} />
+        </Button>
       </div>
 
-      {/* EMPTY STATE */}
-      {commandes.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-gray-400 space-y-4">
-          <div className="bg-white p-6 rounded-2xl shadow-sm">
-            <Package size={40} strokeWidth={1.5} />
-          </div>
-          <p className="font-semibold text-lg">Aucune livraison</p>
-          <p className="text-sm">Clique sur le bouton + pour créer une livraison</p>
+      <form onSubmit={handleSoumettreFormulaire} className="space-y-4">
+
+        <div className="bg-white rounded-2xl p-5 space-y-4">
+          <Label>Nom complet</Label>
+          <Input
+            placeholder="Ex : Ouédraogo Issa"
+            value={form.nom}
+            onChange={(e)=>setForm({...form,nom:e.target.value})}
+          />
+
+          <Label>Téléphone</Label>
+          <Input
+            maxLength={8}
+            placeholder="Ex : 70 00 00 00"
+            value={form.tel}
+            onChange={(e)=>setForm({...form,tel:e.target.value.replace(/\D/g,'')})}
+          />
+
+          <Label>Quartier</Label>
+          <Select onValueChange={handleQuartierChange}>
+            <SelectTrigger className="h-12">
+              <SelectValue placeholder="Choisir un quartier..." />
+            </SelectTrigger>
+
+            <SelectContent position="popper" className="z-[100]">
+              {QUARTIERS_OUAGA.map(q => (
+                <SelectItem key={q.nom} value={q.nom}>{q.nom}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {prix > 0 && (
+            <div className="bg-[#FFF4EF] p-3 rounded-xl text-center font-bold">
+              {prix.toLocaleString()} FCFA
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            disabled={!formValide}
+            className="w-full h-12 rounded-xl font-semibold disabled:bg-gray-300 disabled:text-gray-500 enabled:bg-[#FF6B35] enabled:hover:bg-[#e55a25] enabled:text-white"
+          >
+            Continuer vers le paiement →
+          </Button>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {commandes.map((cmd) => {
-            const statut = STATUT_STYLES[cmd.statut] ?? { label: cmd.statut, color: 'bg-gray-100 text-gray-700' }
 
-            return (
-              <Card key={cmd.id} className="rounded-2xl border-none shadow-sm">
-                <CardContent className="p-5 space-y-4">
+      </form>
 
-                  {/* TOP */}
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2 font-semibold text-[#0A0A0A]">
-                      <User size={16} className="text-[#FF6B35]" />
-                      {cmd.nom_client}
-                    </div>
+      {etape === 'paiement' && (
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
+          <div className="bg-white w-full max-w-md p-6 rounded-t-3xl space-y-5 animate-in slide-in-from-bottom">
 
-                    <span className={`text-xs font-medium px-3 py-1 rounded-full ${statut.color}`}>
-                      {statut.label}
-                    </span>
-                  </div>
+            <p className="text-center text-xl font-bold text-[#FF6B35]">
+              {prix.toLocaleString()} FCFA
+            </p>
 
-                  {/* INFOS */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-gray-500">
-                    <div className="flex items-center gap-2">
-                      <Phone size={14} />
-                      {cmd.telephone_client}
-                    </div>
+            <div className="space-y-2">
+              <Label>Opérateur de paiement</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {OPERATEURS.map(op => (
+                  <button
+                    key={op.value}
+                    type="button"
+                    onClick={() => setPaiement({ ...paiement, operateur: op.value })}
+                    className={`
+                      h-12 rounded-xl border-2 text-sm font-semibold transition-all
+                      ${paiement.operateur === op.value
+                        ? 'border-[#FF6B35] bg-[#FFF4EF] text-[#FF6B35]'
+                        : 'border-gray-200 bg-[#F9FAFB] text-gray-600'
+                      }
+                    `}
+                  >
+                    {op.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                    <div className="flex items-center gap-2">
-                      <MapPin size={14} />
-                      {cmd.quartier}
-                    </div>
+            <div className="space-y-2">
+              <Label>Numéro de paiement</Label>
+              <Input
+                placeholder="Ex : +226 70 00 00 00"
+                value={paiement.telephone}
+                onChange={(e)=>{
+                  const val = e.target.value
+                  if (!val.startsWith("+226")) return
+                  setPaiement({...paiement,telephone:val})
+                }}
+              />
+            </div>
 
-                    <div className="flex items-center gap-2">
-                      <Clock size={14} />
-                      {new Date(cmd.created_at).toLocaleDateString('fr-FR', {
-                        day: '2-digit',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </div>
-                  </div>
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" onClick={()=>setEtape('formulaire')} className="flex-1">
+                Retour
+              </Button>
 
-                  {/* DESCRIPTION COLIS */}
-                  <div className="flex items-start gap-2 text-sm text-gray-500 bg-[#F9FAFB] rounded-xl px-3 py-2">
-                    <FileText size={14} className="mt-0.5 shrink-0 text-[#FF6B35]" />
-                    <span>{cmd.description_colis}</span>
-                  </div>
+              <Button
+                onClick={handleConfirmerPaiement}
+                className="flex-1 bg-[#FF6B35] text-white"
+              >
+                {loading ? <Loader2 className="animate-spin" /> : "Payer"}
+              </Button>
+            </div>
 
-                  {/* CODES DE SÉCURITÉ */}
-                  {cmd.code_depart && (
-                    <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-gray-50">
-                      <div className="flex items-center gap-1.5 bg-[#FFF4EF] px-3 py-1.5 rounded-lg">
-                        <ShieldCheck size={14} className="text-[#FF6B35]" />
-                        <span className="text-[10px] uppercase font-bold text-gray-500">Départ:</span>
-                        <span className="text-sm font-black text-[#FF6B35] tracking-widest">{cmd.code_depart}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-1.5 bg-[#F0FDF4] px-3 py-1.5 rounded-lg">
-                        <ShieldCheck size={14} className="text-green-600" />
-                        <span className="text-[10px] uppercase font-bold text-gray-500">Fin:</span>
-                        <span className="text-sm font-black text-green-600 tracking-widest">{cmd.code_livraison}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* PRICE */}
-                  <div className="flex justify-end pt-1">
-                    <span className="text-xl font-bold text-[#0A0A0A]">
-                      {cmd.prix.toLocaleString()} FCFA
-                    </span>
-                  </div>
-
-                </CardContent>
-              </Card>
-            )
-          })}
+          </div>
         </div>
       )}
     </div>
