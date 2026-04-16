@@ -31,13 +31,11 @@ export default function NouvelleLivraison() {
   const [etape, setEtape] = useState<Etape>('choix_methode')
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({ nom: '', tel: '', quartier: '', description: '' })
-
-  // ✅ paiement avec +226 imposé
-  const [paiement, setPaiement] = useState({ operateur: '', telephone: '+226 ' })
-
+  const [paiement, setPaiement] = useState({ operateur: '', telephone: '' })
   const [prix, setPrix] = useState(0)
   const [codes, setCodes] = useState({ depart: '', livraison: '' })
 
+  // ✅ validation dynamique
   const formValide =
     form.nom.trim() !== '' &&
     form.tel.length === 8 &&
@@ -65,7 +63,7 @@ export default function NouvelleLivraison() {
 
   const handleConfirmerPaiement = async () => {
     if (!paiement.operateur) return alert("Choisissez un opérateur")
-    if (!paiement.telephone || paiement.telephone.length < 12) return alert("Entrez un numéro valide")
+    if (!paiement.telephone) return alert("Entrez votre numéro")
 
     setLoading(true)
     await new Promise(res => setTimeout(res, 2000))
@@ -106,6 +104,7 @@ export default function NouvelleLivraison() {
     }
   }
 
+  // ================= CHOIX METHODE =================
   if (etape === 'choix_methode') {
     return (
       <div className="min-h-screen bg-[#F9FAFB] flex flex-col items-center justify-center p-6">
@@ -132,6 +131,7 @@ export default function NouvelleLivraison() {
     )
   }
 
+  // ================= CONFIRMATION =================
   if (etape === 'confirmation') {
     return (
       <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center p-4">
@@ -160,6 +160,7 @@ export default function NouvelleLivraison() {
     )
   }
 
+  // ================= FORMULAIRE =================
   return (
     <div className="min-h-screen bg-[#F9FAFB] px-4 py-6">
       <div className="flex justify-between items-center mb-4">
@@ -173,19 +174,10 @@ export default function NouvelleLivraison() {
 
         <div className="bg-white rounded-2xl p-5 space-y-4">
           <Label>Nom complet</Label>
-          <Input
-            placeholder="Ex : Ouédraogo Issa"
-            value={form.nom}
-            onChange={(e)=>setForm({...form,nom:e.target.value})}
-          />
+          <Input value={form.nom} onChange={(e)=>setForm({...form,nom:e.target.value})} />
 
           <Label>Téléphone</Label>
-          <Input
-            maxLength={8}
-            placeholder="Ex : 70 00 00 00"
-            value={form.tel}
-            onChange={(e)=>setForm({...form,tel:e.target.value.replace(/\D/g,'')})}
-          />
+          <Input maxLength={8} value={form.tel} onChange={(e)=>setForm({...form,tel:e.target.value.replace(/\D/g,'')})} />
 
           <Label>Quartier</Label>
           <Select onValueChange={handleQuartierChange}>
@@ -193,6 +185,7 @@ export default function NouvelleLivraison() {
               <SelectValue placeholder="Choisir un quartier..." />
             </SelectTrigger>
 
+            {/* FIX Z INDEX */}
             <SelectContent position="popper" className="z-[100]">
               {QUARTIERS_OUAGA.map(q => (
                 <SelectItem key={q.nom} value={q.nom}>{q.nom}</SelectItem>
@@ -217,6 +210,7 @@ export default function NouvelleLivraison() {
 
       </form>
 
+      {/* SECTION PAIEMENT */}
       {etape === 'paiement' && (
         <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
           <div className="bg-white w-full max-w-md p-6 rounded-t-3xl space-y-5 animate-in slide-in-from-bottom">
@@ -225,6 +219,7 @@ export default function NouvelleLivraison() {
               {prix.toLocaleString()} FCFA
             </p>
 
+            {/* OPERATEURS */}
             <div className="space-y-2">
               <Label>Opérateur de paiement</Label>
               <div className="grid grid-cols-2 gap-3">
@@ -247,16 +242,13 @@ export default function NouvelleLivraison() {
               </div>
             </div>
 
+            {/* NUMERO */}
             <div className="space-y-2">
               <Label>Numéro de paiement</Label>
               <Input
-                placeholder="Ex : +226 70 00 00 00"
+                placeholder="Ex: 53 00 00 00"
                 value={paiement.telephone}
-                onChange={(e)=>{
-                  const val = e.target.value
-                  if (!val.startsWith("+226")) return
-                  setPaiement({...paiement,telephone:val})
-                }}
+                onChange={(e)=>setPaiement({...paiement,telephone:e.target.value})}
               />
             </div>
 
