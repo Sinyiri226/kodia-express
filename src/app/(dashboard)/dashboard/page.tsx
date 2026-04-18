@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Package, TrendingUp, Clock, CheckCircle, Plus, ShieldCheck } from "lucide-react"
+import { Package, TrendingUp, Clock, CheckCircle, Plus } from "lucide-react"
 
 type Commande = {
   id: string
@@ -46,20 +46,6 @@ export default function Dashboard() {
   const enAttente = commandes.filter(c => c.statut === 'en_attente').length
   const livrees = commandes.filter(c => c.statut === 'livre').length
 
-  const STATUT_COLORS: Record<string, string> = {
-    en_attente: 'bg-yellow-100 text-yellow-700',
-    en_cours:   'bg-blue-100 text-blue-700',
-    livre:      'bg-green-100 text-green-700',
-    annule:     'bg-red-100 text-red-700',
-  }
-
-  const STATUT_LABELS: Record<string, string> = {
-    en_attente: 'En attente',
-    en_cours:   'En cours',
-    livre:      'Livré',
-    annule:     'Annulé',
-  }
-
   if (loading) return (
     <div className="p-8 flex items-center justify-center min-h-screen">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF6B35]" />
@@ -72,7 +58,6 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-[#0A0A0A]">Vue d'ensemble</h1>
-        {/* ✅ Route correcte alignée avec layout.tsx */}
         <Link href="/dashboard/nouvelle-livraison">
           <Button className="bg-[#FF6B35] hover:bg-orange-600 text-white rounded-xl flex items-center gap-2">
             <Plus size={16} /> Nouvelle livraison
@@ -100,50 +85,6 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         ))}
-      </div>
-
-      {/* Dernières commandes */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-[#0A0A0A]">Dernières commandes</h2>
-        {commandes.length === 0 ? (
-          <p className="text-gray-400 text-sm">Aucune commande pour l'instant.</p>
-        ) : (
-          commandes.slice(0, 5).map(cmd => (
-            <Card key={cmd.id} className="rounded-2xl border-none shadow-sm">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="font-medium text-[#0A0A0A]">{cmd.nom_client}</p>
-                  <p className="text-xs text-gray-500">{cmd.quartier} · {new Date(cmd.created_at).toLocaleDateString('fr-FR')}</p>
-                  
-                  {cmd.code_depart && (
-                    <div className="flex gap-2 mt-1">
-                      <div className="flex items-center gap-1 bg-[#FFF4EF] px-2 py-0.5 rounded text-[10px] font-bold text-[#FF6B35]">
-                        <ShieldCheck size={10} /> D: {cmd.code_depart}
-                      </div>
-                      <div className="flex items-center gap-1 bg-[#F0FDF4] px-2 py-0.5 rounded text-[10px] font-bold text-green-600">
-                        <ShieldCheck size={10} /> L: {cmd.code_livraison}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex flex-col items-end gap-2">
-                  <span className="font-bold text-[#FF6B35]">{cmd.prix.toLocaleString()} F</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${STATUT_COLORS[cmd.statut] ?? 'bg-gray-100 text-gray-600'}`}>
-                    {STATUT_LABELS[cmd.statut] ?? cmd.statut}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-        {commandes.length > 5 && (
-          <Link href="/mes-livraisons">
-            <p className="text-sm text-[#FF6B35] font-medium cursor-pointer hover:underline">
-              Voir toutes les livraisons →
-            </p>
-          </Link>
-        )}
       </div>
 
     </div>

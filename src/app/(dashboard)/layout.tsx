@@ -86,7 +86,6 @@ export default function DashboardLayout({
       </main>
 
       {/* ================= FLOATING ACTION BUTTON (MOBILE) ================= */}
-      {/* ✅ MODIFIÉ : caché sur /dashboard/nouvelle-livraison */}
       {!cacherBoutonFlottant && (
         <Link
           href="/dashboard/nouvelle-livraison"
@@ -129,6 +128,16 @@ export default function DashboardLayout({
               </Link>
             )
           })}
+
+          {/* ✅ NOUVEAU : Bouton déconnexion mobile */}
+          <button
+            onClick={handleLogout}
+            className="flex flex-col items-center justify-center text-xs"
+          >
+            <LogOut size={22} className="text-red-400" />
+            <span className="text-red-400 mt-1">Quitter</span>
+          </button>
+
         </div>
       </div>
 

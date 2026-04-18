@@ -23,10 +23,7 @@ export default function ConnexionPage() {
     })
 
     if (signInError) {
-      // Gestion précise des cas d'erreur
-      if (signInError.message.includes('Email not confirmed')) {
-        setError('Confirmez votre email avant de vous connecter. Vérifiez votre boîte mail.')
-      } else if (signInError.message.includes('Invalid login credentials')) {
+      if (signInError.message.includes('Invalid login credentials')) {
         setError('Email ou mot de passe incorrect.')
       } else {
         setError('Une erreur est survenue. Veuillez réessayer.')
@@ -66,7 +63,15 @@ export default function ConnexionPage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-[#0A0A0A]">Mot de passe</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-[#0A0A0A]">Mot de passe</label>
+              <Link
+                href="/mot-de-passe-oublie"
+                className="text-xs text-[#FF6B35] hover:underline"
+              >
+                Mot de passe oublié ?
+              </Link>
+            </div>
             <input
               type="password"
               required
